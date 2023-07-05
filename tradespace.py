@@ -41,49 +41,74 @@ class TradespaceDesigner:
         # Create a pandas DataFrame from the tradespace data
         self.tradespace_df = pd.DataFrame(tradespace_data, columns=design_variable_names)
 
-        return self.tradespace_df
-
-    def add_performance_formula(self, name: str, formula: callable):
-
-        # check if the performance variable is already in the dict
-        if name not in self.performance_itens.keys():
-            raise Exception('The performance variable {} is not in the tradespace. Please add it first.'.format(name))
-
-        # add performance variable to the dict
-        self.performance_itens[name] = {'formula': formula}
-
         return
-    
-    # def calculate_performance(self):
-
-    #     # iterate over the performance variables
-    #     for name, item in self.performance_itens.items():
-
-    #         # if the item has not a formula
-    #         if not ('formula' in item.keys()):
-    #             raise Exception('The performance variable {} has no formula'.format(name))
-            
-    #         # get the formula
-    #         formula = item['formula']
-
-    #         # iterate over the tradespace combinations
-    #         for index, row in self.tradespace_df.iterrows():
-
-    #             # call the formula with the design variables values
-    #             result = formula(**row)
-
-    #             # add the result to the tradespace dataframe
-    #             self.tradespace_df.loc[index, name] = result
 
     def calculate_sau(self):
 
+        # iterate over the performance variables
         for name, item in self.performance_itens.items():
 
-            pass
+            # calculate the SAU with a linear function
+            self.tradespace_df[name + '_SAU'] = (self.tradespace_df[name] - item['min_value']) / (item['max_value'] - item['min_value'])
+
+    def calculate_mau(self):
+
+        self.tradespace_df['MAU'] = 0
+        for name, item in self.performance_itens.items():
+            self.tradespace_df['MAU'] += item['weight'] * self.tradespace_df[name + '_SAU']
+    
+    def plot_tradespace(self, x_name, y_name, block=True, labels=False, hexbin=True):
+
+        # Plot the Maximum Payload vs MAU
+        fig, ax = plt.subplots()
+        ax.scatter(designer.tradespace_df[x_name], designer.tradespace_df[y_name], s=50, c='b', marker="s", label=y_name)
+        ax.set_xlabel(x_name)
+        ax.set_ylabel(y_name)
+
+        # # Add labels for each point
+        if labels:
+            for i, row in designer.tradespace_df.iterrows():
+                ax.annotate(f"ID: {i}", (row[x_name], row[y_name]), textcoords="offset points", xytext=(0,10), ha='center')
+
+        # Show the legend and plot the figure
+        ax.legend()
+
+        if hexbin:
+            ax.hexbin(designer.tradespace_df[x_name], designer.tradespace_df[y_name], gridsize=20, cmap='Blues')
+
+        plt.show(block=block)
+    
+    def plot_tradespace_plotly(self, x_name, y_name):
+        import plotly.graph_objects as go
+
+        # Create the scatter plot
+        fig = go.Figure(data=go.Scatter(
+            x=designer.tradespace_df[x_name],
+            y=designer.tradespace_df[y_name],
+            mode='markers',
+            marker=dict(
+                size=10,
+                color='blue',
+                symbol='square'
+            ),
+            text=[f'ID: {i}' for i in range(len(self.tradespace_df))],
+            hovertemplate='<b>%{text}</b><br><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>'
+        ))
+
+        # Update the layout
+        fig.update_layout(
+            xaxis=dict(title=x_name),
+            yaxis=dict(title=y_name),
+            showlegend=False
+        )
+
+        # Show the plot
+        fig.show()
 
 # Define your performance variables
 designer = TradespaceDesigner()
 
+# Add performance variables
 # Add maximum flight distance
 designer.add_performance_variable("Maximum Flight Distance", 1, 100, "km", 0.33)
 
@@ -107,16 +132,28 @@ designer.add_design_variable("Number of Batteries", "unit", [1, 2, 3])
 designer.add_design_variable("Number of Motors", "unit", [4, 6, 8])
 
 # Add motor thrust
-designer.add_design_variable("Motor Thrust", "N", [300, 400, 500, 600, 700])
+designer.add_design_variable("Motor Thrust", "N", [3, 4, 5, 6, 7])
 
+# Generate the tradespace
 df = designer.generate_tradespace()
 
 # Define the performance formulas
 designer.tradespace_df["Maximum Flight Distance"] = 20
-designer.tradespace_df["Maximum Payload"] = designer.tradespace_df['Number of Motors'] * designer.tradespace_df['Motor Thrust'] / 9.81 - designer.tradespace_df['Number of Batteries'] * 0.5
+designer.tradespace_df["Maximum Payload"] = designer.tradespace_df['Number of Motors'] * designer.tradespace_df['Motor Thrust'] / (9.81 * 1) - designer.tradespace_df['Number of Batteries'] * 0.5
 designer.tradespace_df["Maximum Speed"] = 50
 
+# calculate cost
+designer.tradespace_df["Cost"] = designer.tradespace_df['Number of Motors'] * 10 + designer.tradespace_df['Number of Batteries'] * 20 + designer.tradespace_df['Battery Capacity'] * designer.tradespace_df['Battery Voltage'] / 1000
 
+# Calculate the SAU
+designer.calculate_sau()
 
+# Calculate the MAU
+designer.calculate_mau()
 
-print(designer.tradespace_df.head())
+# Save the tradespace to a CSV file
+designer.tradespace_df.to_csv('tradespace.csv', index=True)
+
+# designer.plot_tradespace('Cost', 'MAU')
+
+designer.plot_tradespace_plotly('Cost', 'MAU')
