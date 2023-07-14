@@ -6,8 +6,8 @@ import itertools
 class TradespaceDesigner:
     def __init__(self):
 
-        # performance itens dict that will be added by the user
-        self.performance_itens = {}
+        # performance items dict that will be added by the user
+        self.performance_items = {}
 
         # design variables dict that will be added by the user
         self.design_variables = {}
@@ -17,7 +17,7 @@ class TradespaceDesigner:
     def add_performance_variable(self, name, min_value, max_value, units, weight):
 
         # add performance variable to the dict
-        self.performance_itens[name] = {'min_value': min_value,
+        self.performance_items[name] = {'min_value': min_value,
                                         'max_value': max_value,
                                         'units': units,
                                         'weight': weight}
@@ -46,7 +46,7 @@ class TradespaceDesigner:
     def calculate_sau(self):
 
         # iterate over the performance variables
-        for name, item in self.performance_itens.items():
+        for name, item in self.performance_items.items():
 
             # calculate the SAU with a linear function
             self.tradespace_df[name + '_SAU'] = (self.tradespace_df[name] - item['min_value']) / (item['max_value'] - item['min_value'])
@@ -54,9 +54,9 @@ class TradespaceDesigner:
     def calculate_mau(self):
 
         self.tradespace_df['MAU'] = 0
-        for name, item in self.performance_itens.items():
+        for name, item in self.performance_items.items():
             self.tradespace_df['MAU'] += item['weight'] * self.tradespace_df[name + '_SAU']
-    
+
     def plot_tradespace(self, x_name, y_name, block=True, labels=False, hexbin=True):
 
         # Plot the Maximum Payload vs MAU
@@ -68,7 +68,7 @@ class TradespaceDesigner:
         # # Add labels for each point
         if labels:
             for i, row in designer.tradespace_df.iterrows():
-                ax.annotate(f"ID: {i}", (row[x_name], row[y_name]), textcoords="offset points", xytext=(0,10), ha='center')
+                ax.annotate(f"ID: {i}", (row[x_name], row[y_name]), textcoords="offset points", xytext=(0, 10), ha='center')
 
         # Show the legend and plot the figure
         ax.legend()
