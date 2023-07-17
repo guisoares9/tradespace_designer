@@ -7,16 +7,150 @@ import uav_model as model
 
 class UAVModel:
 
-    g = 9.81  # m/s^2
+    g = 9.80665  # gravitational acceleration (m/s^2)
 
     def __init__(self) -> None:
+
+        # environment
+        self.temp = None  # temperature (°C)
+        self.h = None  # altitude (m)
+        self.pho = None  # air density (kg/m^3)
+
+        # general
+        self.G = None  # weight of the uav (N)
+
+        # aerodynamics and geometry of the uav
+        self.S = 0.5 * 0.45 ** 2  # surface area of the uav (m^2)
+        self.C1 = 3  # C1 coefficient of the uav (unit)
+        self.C2 = 1.5  # C2 coefficient of the uav (unit)
+
+        # propeller
+        self.Dp = None  # propeller diameter (m)
+        self.Hp = None  # propeller pitch (m)
+        self.Bp = None
+
+        self.Ct = None
+        self.Cm = None
+
+        # motor
+        self.Kv0 = None
+        self.Um0 = None
+        self.Im0 = None
+        self.Rm = None
+        self.nr = None
+
+        # esc
+        self.Re = None
+
+        # battery
+        self.Ub = None
+        self.Cb = None
+        self.Cmin = None
+        self.Rb = None
+
+        # control
+        self.Icontrol = None
+
+        # safety factor
+        self.safe_duty_cycle = None
+
+        # calculated parameters
+        self.T_hover = None
+        self.N_hover = None
+        self.M_hover = None
+        self.Um_hover = None
+        self.Im_hover = None
+        self.sigma_hover = None
+        self.Ue_hover = None
+        self.Ie_hover = None
+        self.Ib_hover = None
+        self.t_hover = None
+        self.eta = None
+
+        self.T_max = None
+        self.N_max = None
+        self.M_max = None
+        self.Um_max = None
+        self.Im_max = None
+        self.sigma_max = None
+        self.Ue_max = None
+        self.Ie_max = None
+        self.Ib_max = None
+        self.t_max = None
+        self.eta = None
+
+        self.T_payload = None
+        self.N_payload = None
+        self.M_payload = None
+        self.Um_payload = None
+        self.Im_payload = None
+        self.sigma_payload = None
+        self.Ue_payload = None
+        self.Ie_payload = None
+        self.Ib_payload = None
+        self.t_payload = None
+        self.eta = None
+        self.max_payload = None
+        self.max_pitch = None
+
+        self.max_speed = None
+        self.max_distance = None
+
         return None
+
+    def setAll(self, temp, h, mass, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub, Cb, Cmin, Rb, Icontrol, safe_duty_cycle):
+        '''
+        Set all the parameters
+        :param temp: Temperature (°C)
+        :param h: Altitude (m)
+        :param mass: Mass of the UAV (Kg)
+        :param Dp: propeller diameter (in)
+        :param Hp: propeller pitch (in)
+        :param Bp: propeller blade number (unit)
+        :param Kv0: Motor constant (rpm/V)
+        :param Um0: Motor no-load voltage (V)
+        :param Im0: Motor no-load current (A)
+        :param Rm: Motor resistance (Ohm)
+        :param nr: Number of rotors (unit)
+        :param Re: Equivalent resistance of the esc (Ohm)
+        :param Ub: Battery voltage (V)
+        :param Cb: Battery capacity (mAh)
+        :param Cmin: Minimum battery capacity (mAh)
+        :param Rb: Battery internal resistance (Ohm)
+        :param Icontrol: Control current (A)
+        :param safe_duty_cycle: Safety factor for maximum payload mode (%)
+        :return: None
+        '''
+
+        # set environment
+        self.setEnvironment(temp, h)
+
+        # set mass
+        self.setMass(mass)
+
+        # set propeller
+        self.setPropeller(Dp, Hp, Bp)
+
+        # set motor
+        self.setMotor(Kv0, Um0, Im0, Rm, nr)
+
+        # set esc
+        self.setESC(Re)
+
+        # set battery
+        self.setBattery(Ub, Cb, Cmin, Rb)
+
+        # set control
+        self.setControl(Icontrol)
+
+        # set safety factor
+        self.setSafetyFactor(safe_duty_cycle)
 
     def setEnvironment(self, temp, h):
         '''
         Set the environment
-        :param temp: Temperature
-        :param h: Altitude
+        :param temp: Temperature (°C)
+        :param h: Altitude (m)
         :return: None
         '''
 
@@ -37,13 +171,13 @@ class UAVModel:
     def setPropeller(self, Dp, Hp, Bp):
         '''
         Set the propeller parameters
-        :param Dp: propeller diameter
-        :param Hp: propeller pitch
-        :param Bp: propeller blade number
+        :param Dp: propeller diameter (in)
+        :param Hp: propeller pitch (in)
+        :param Bp: propeller blade number (unit)
         :return: None
         '''
-        self.Dp = Dp
-        self.Hp = Hp
+        self.Dp = Dp * 0.0254
+        self.Hp = Hp * 0.0254
         self.Bp = Bp
 
         # calculate propeller constants
@@ -53,11 +187,11 @@ class UAVModel:
     def setMotor(self, Kv0, Um0, Im0, Rm, nr):
         '''
         Set the motor parameters
-        :param Kv0: Motor constant
-        :param Um0: Motor voltage
-        :param Im0: Motor current
-        :param Rm: Motor resistance
-        :param nr: Number of rotors
+        :param Kv0: Motor constant (rpm/V)
+        :param Um0: Motor voltage at no-load (V)
+        :param Im0: Motor current at no-load (A)
+        :param Rm: Motor resistance (Ohm)
+        :param nr: Number of rotors (unit)
         :return: None
         '''
         self.Kv0 = Kv0
@@ -69,7 +203,7 @@ class UAVModel:
     def setESC(self, Re):
         '''
         Set the ESC parameters
-        :param Re: Equivalent resistance of the esc
+        :param Re: Equivalent resistance of the esc (Ohm)
         :return: None
         '''
 
@@ -78,10 +212,10 @@ class UAVModel:
     def setBattery(self, Ub, Cb, Cmin, Rb):
         '''
         Set the battery parameters
-        :param Ub: Battery voltage
-        :param Cb: Battery capacity
-        :param Cmin: Minimum battery capacity
-        :param Rb: Battery internal resistance
+        :param Ub: Battery voltage (V)
+        :param Cb: Battery capacity (mAh)
+        :param Cmin: Minimum battery capacity (mAh)
+        :param Rb: Battery internal resistance (Ohm)
         :return: None
         '''
 
@@ -93,7 +227,7 @@ class UAVModel:
     def setControl(self, Icontrol):
         '''
         Set the control current
-        :param Icontrol: Control current
+        :param Icontrol: Control current (A)
         :return: None
         '''
 
@@ -102,7 +236,7 @@ class UAVModel:
     def setSafetyFactor(self, safe_duty_cycle):
         '''
         Set the safety factor
-        :param safe_duty_cycle: Safety factor for maximum payload mode
+        :param safe_duty_cycle: Safety factor for maximum payload mode (%)
         :return: None
         '''
 
@@ -244,7 +378,8 @@ class UAVModel:
                                                   self.Cb,
                                                   self.Cmin,
                                                   self.Rb,
-                                                  self.Icontrol)
+                                                  self.Icontrol,
+                                                  self.safe_duty_cycle)
 
         self.T_payload = result[0]
         self.N_payload = result[1]
@@ -259,6 +394,30 @@ class UAVModel:
         self.eta = result[10]
         self.max_payload = result[11]
         self.max_pitch = result[12]
+
+        result = model.calculate_vel_and_distance(self.max_pitch,
+                                                  self.pho,
+                                                  self.G,
+                                                  self.S,
+                                                  self.C1,
+                                                  self.C2,
+                                                  self.Dp,
+                                                  self.Hp,
+                                                  self.Bp,
+                                                  self.Kv0,
+                                                  self.Um0,
+                                                  self.Im0,
+                                                  self.Rm,
+                                                  self.nr,
+                                                  self.Re,
+                                                  self.Ub,
+                                                  self.Cb,
+                                                  self.Cmin,
+                                                  self.Rb,
+                                                  self.Icontrol)
+
+        self.max_distance = result[0]
+        self.max_speed = result[1]
 
     def show_performance(self):
         print(f"{'-'*40}")
@@ -310,43 +469,53 @@ class UAVModel:
         print(f"{'Efficiency:':<30}{self.eta:>10.3f}")
         print(f"{'Maximum payload:':<30}{self.max_payload / self.g:>10.3f} Kg")
         print(f"{'Maximum pitch:':<30}{np.rad2deg(self.max_pitch):>10.3f} deg")
+        print("")
+        print(f"{'Reachability':^40}")
         print(f"{'-'*40}")
+        print(f"{'Maximum distance:':<30}{self.max_distance:>10.3f} m")
+        print(f"{'Maximum speed:':<30}{self.max_speed:>10.3f} m/s")
+        print(f"{'-'*40}")
+        print("")
 
 
 if __name__ == '__main__':
 
-    # initialize UAVModel
+    # Model Validation
+    # Validation of Table 2, 3, 4, 5
     uav = UAVModel()
-
-    # set environment
-    uav.setEnvironment(temp=25, h=10)
-
-    # set mass
-    uav.setMass(mass=1.47)
-
-    # set propeller
-    uav.setPropeller(Dp=10 * 0.0254, Hp=4.5 * 0.0254, Bp=2)
-
-    # set motor
-    uav.setMotor(Kv0=890, Um0=10, Im0=0.5, Rm=0.101, nr=4)
-
-    # set esc
-    uav.setESC(Re=0.008)
-
-    # set battery
-    uav.setBattery(Ub=12, Cb=5000, Cmin=0.2 * 5000, Rb=0.01)
-
-    # set control
-    uav.setControl(Icontrol=1)
-
-    # set safety factor
-    uav.setSafetyFactor(safe_duty_cycle=0.8)
-
-    # show configuration
+    uav.setAll(temp=25, h=10, mass=14.7 / uav.g, Dp=10, Hp=4.5, Bp=2, Kv0=890, Um0=10, Im0=0.5,
+               Rm=0.101, nr=4, Re=0.008, Ub=12, Cb=5000, Cmin=5000 * 0.2, Rb=0.01, Icontrol=1, safe_duty_cycle=0.8)
     uav.show_config()
-
-    # calculate performance
     uav.calculate_performance()
-
-    # show performance
     uav.show_performance()
+
+    # Validation of Table 6
+    uav1 = UAVModel()
+    uav1.setAll(temp=25, h=10, mass=14.7 / uav.g, Dp=10, Hp=4.5, Bp=2, Kv0=890, Um0=10, Im0=0.5,
+                Rm=0.101, nr=4, Re=0.008, Ub=11.1, Cb=5000, Cmin=5000 * 0.2, Rb=0.0078, Icontrol=1, safe_duty_cycle=0.8)
+    uav2 = UAVModel()
+    uav2.setAll(temp=25, h=10, mass=28.763 / uav.g, Dp=13, Hp=4.5, Bp=2, Kv0=415, Um0=10, Im0=0.3,
+                Rm=0.2425, nr=4, Re=0.008, Ub=22.2, Cb=5500, Cmin=5000 * 0.2, Rb=0.0114, Icontrol=1, safe_duty_cycle=0.8)
+    uav3 = UAVModel()
+    uav3.setAll(temp=25, h=10, mass=29.4 / uav.g, Dp=12, Hp=5.5, Bp=2, Kv0=480, Um0=10, Im0=0.4,
+                Rm=0.178, nr=4, Re=0.006, Ub=22.2, Cb=5000, Cmin=5000 * 0.2, Rb=0.0168, Icontrol=1, safe_duty_cycle=0.8)
+    
+    uav1.calculate_performance()
+    uav2.calculate_performance()
+    uav3.calculate_performance()
+
+    print("UAV1")
+    uav1.show_performance()
+    print("UAV2")
+    uav2.show_performance()
+    print("UAV3")
+    uav3.show_performance()
+
+    # Validation with DJI Inspire
+    dji = UAVModel()
+    dji.setAll(temp=25, h=10, mass=28.73 / uav.g, Dp=13, Hp=4.5, Bp=2, Kv0=350, Um0=10, Im0=0.3,
+               Rm=0.21, nr=4, Re=0.02, Ub=24, Cb=5700, Cmin=5000 * 0.15, Rb=0.12, Icontrol=1, safe_duty_cycle=0.7)
+    print("DJI Inspire")
+    dji.show_config()
+    dji.calculate_performance()
+    dji.show_performance()

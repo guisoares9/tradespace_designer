@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from math import pi, sqrt, atan2, acos
+from numpy import pi, sqrt, cos, sin, tan, arctan, arccos, arctan2
 from scipy.optimize import fsolve
 
 # environment
@@ -44,7 +44,7 @@ def torque_coefficient(Dp, Hp, Bp):
 
     # drag coeff
     Cd = Cfd + ((pi * A * K0 ** 2) / e) * (epsilon *
-                                           atan2(Hp, pi * Dp) - alpha0) ** 2 / (pi * A + K0) ** 2
+                                           arctan2(Hp, np.pi * Dp) - alpha0) ** 2 / (pi * A + K0) ** 2
 
     # torque coeff
     Cm = 1 / (8 * A) * pi ** 2 * Cd * zeta ** 2 * _lambda * Bp ** 2
@@ -71,8 +71,8 @@ def thrust_coefficient(Dp, Hp, Bp):
     K0 = 6.11
 
     # thrust coeff
-    Ct = 0.25 * pi ** 3 * _lambda * zeta ** 2 * Bp * K0 * \
-        (epsilon * atan2(Hp, pi * Dp) - alpha0) / (pi * A + K0)
+    Ct = 0.25 * pi ** 3 * _lambda * zeta ** 2 * Bp * K0 
+    Ct *= (epsilon * arctan2(Hp, pi * Dp) - alpha0) / (pi * A + K0)
 
     return Ct
 
@@ -175,9 +175,14 @@ def duty_cycle(Re, Um, Im, Ub):
 
     sigma = (Um + Im * Re) / Ub
 
-    if sigma > 1:
-        sigma = 1
-        print("Necessary duty cycle is greater than 1, the motor is saturated. Limiting duty cycle to 1")
+    if isinstance(sigma, int) or isinstance(sigma, float):
+        if sigma > 1:
+            sigma = 1
+            print("Necessary duty cycle is greater than 1. Limiting duty cycle to 1")
+    else:
+        sigma = np.where(sigma > 1, 1, sigma)
+        if np.any(sigma > 1):
+            print("Some necessary duty cycles are greater than 1. Limiting duty cycles to 1")
 
     return sigma
 
@@ -251,6 +256,31 @@ def system_efficiency(num_motors, M, N, Ub, Ib):
 
     eta = (2 * pi / 60) * (num_motors * M * N) / (Ub * Ib)
     return eta
+
+
+def speed_by_pitch(pitch, pho, G, S, C1, C2):
+
+    # speed
+    speed = np.sqrt(2 * G * np.tan(pitch) / (pho * S * (C1 *
+                    (1 - np.cos(pitch) ** 3) + C2 * (1 - np.sin(pitch) ** 3))))
+
+    return speed
+
+
+def propeller_speed_by_pitch(pitch, pho, G, Ct, Dp, nr):
+
+    # rpm
+    N = 60 * sqrt(G / (pho * (Dp ** 4) * Ct * nr * np.cos(pitch)))
+
+    return N
+
+
+def propeller_torque_by_pitch(pitch, pho, G, Ct, Cm, Dp, nr):
+
+    # torque
+    M = (G * Cm * Dp) / (Ct * nr * np.cos(pitch))
+
+    return M
 
 # Problem solver
 
@@ -448,15 +478,15 @@ def calculate_max_thrust_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub,
     return T, N, M, Um, Im, max_duty, Ue, Ie, Ib, t_hover, eta, max_payload, max_pitch
 
 
-def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub, Cb, Cmin, Rb, Icontrol, verbose=False):
+def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub, Cb, Cmin, Rb, Icontrol, safe_duty_cycle = 0.8, verbose=False):
 
     if verbose:
         print("")
     if verbose:
         print("Calculating maximum payload mode")
 
-    # on max payload safe_duty_cycle is 0.8
-    target_duty = 0.8
+    # on max payload safe_duty_cycle
+    target_duty = safe_duty_cycle
 
     def equations(x):
 
@@ -506,7 +536,7 @@ def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub
         print('Maximum payload: ', round(max_payload, 3), ' kg')
 
     # calculate max pitch
-    max_pitch = acos(G / (T * nr))
+    max_pitch = arccos(G / (T * nr))
     if verbose:
         print('Maximum pitch: ', round(max_pitch, 3), ' rad')
 
@@ -542,3 +572,45 @@ def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub
         print('System efficiency: ', round(eta, 3))
 
     return T, N, M, Um, Im, target_duty, Ue, Ie, Ib, t_hover, eta, max_payload, max_pitch
+
+
+def calculate_vel_and_distance(max_pitch, pho, G, S, C1, C2, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub, Cb, Cmin, Rb, Icontrol, verbose=False):
+
+    pitch = np.linspace(0, max_pitch, 1000)
+
+    # calculate speed
+    speed_arr = speed_by_pitch(pitch, pho, G, S, C1, C2)
+
+    # calculate rpm
+    Ct = thrust_coefficient(Dp, Hp, Bp)
+    rpm_arr = propeller_speed_by_pitch(pitch, pho, G, Ct, Dp, nr)
+
+    # calculate torque
+    Cm = torque_coefficient(Dp, Hp, Bp)
+    torque_arr = propeller_torque_by_pitch(pitch, pho, G, Ct, Cm, Dp, nr)
+
+    # calculate motor voltage
+    Um_arr = motor_voltage(Kv0, Um0, Im0, Rm, torque_arr, rpm_arr)
+
+    # calculate motor current
+    Im_arr = motor_current(Kv0, Um0, Im0, Rm, torque_arr)
+
+    # calculate duty cycle
+    sigma_arr = duty_cycle(Re, Um_arr, Im_arr, Ub)
+
+    # calculate esc current
+    Ie_arr = esc_current(sigma_arr, Im_arr)
+
+    # calculate battery current
+    Ib_arr = battery_current(nr, Ie_arr, Icontrol)
+
+    # calculate battery endurance
+    t_arr = battery_endurance(Ib_arr, Cb, Cmin)
+
+    # calculate max distance
+    max_distance = np.max(60 * speed_arr * t_arr)
+
+    # calculate max velocity
+    max_velocity = np.max(speed_arr)
+
+    return max_distance, max_velocity
