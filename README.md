@@ -1,5 +1,3 @@
-Certainly! Here's an updated version of the README with the added usage section:
-
 # Tradespace Analyzer for Drone Design
 
 The Tradespace Analyzer for Drone Design is a powerful tool that allows designers to analyze various options and design attributes of drone configurations. The system leverages state-of-the-art methods, as presented in the "A Practical Performance Evaluation Method for Electric Multicopters" article by the creators of the FlyEval website, to model the relationships between drone parameters such as battery specifications, motors, and propellers.
@@ -63,4 +61,4 @@ Let's collaborate and create the next generation of optimized drone designs!
 
 ## License
 
-The Tradespace Analyzer for Drone Design is released under the [MIT License](LICENSE).
+The Tradespace Analyzer for Drone Design is unreleased yet.
