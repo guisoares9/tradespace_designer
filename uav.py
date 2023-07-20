@@ -98,7 +98,7 @@ class UAVModel:
 
         return None
 
-    def setAll(self, temp, h, mass, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub, Cb, Cmin, Rb, Icontrol, safe_duty_cycle):
+    def setAll(self, temp, h, mass, nr, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, Re, Ub, Cb, Cmin, Rb, Icontrol, safe_duty_cycle):
         '''
         Set all the parameters
         :param temp: Temperature (°C)
@@ -128,11 +128,14 @@ class UAVModel:
         # set mass
         self.setMass(mass)
 
+        # set number of rotors
+        self.setNumberOfRotors(nr)
+
         # set propeller
         self.setPropeller(Dp, Hp, Bp)
 
         # set motor
-        self.setMotor(Kv0, Um0, Im0, Rm, nr)
+        self.setMotor(Kv0, Um0, Im0, Rm)
 
         # set esc
         self.setESC(Re)
@@ -167,6 +170,14 @@ class UAVModel:
         :return: None
         '''
         self.G = mass * self.g
+    
+    def setNumberOfRotors(self, nr):
+        '''
+        Set the number of rotors
+        :param nr: Number of rotors (unit)
+        :return: None
+        '''
+        self.nr = nr
 
     def setPropeller(self, Dp, Hp, Bp):
         '''
@@ -184,21 +195,19 @@ class UAVModel:
         self.Ct = model.thrust_coefficient(Dp, Hp, Bp)
         self.Cm = model.torque_coefficient(Dp, Hp, Bp)
 
-    def setMotor(self, Kv0, Um0, Im0, Rm, nr):
+    def setMotor(self, Kv0, Um0, Im0, Rm):
         '''
         Set the motor parameters
         :param Kv0: Motor constant (rpm/V)
         :param Um0: Motor voltage at no-load (V)
         :param Im0: Motor current at no-load (A)
         :param Rm: Motor resistance (Ohm)
-        :param nr: Number of rotors (unit)
         :return: None
         '''
         self.Kv0 = Kv0
         self.Um0 = Um0
         self.Im0 = Im0
         self.Rm = Rm
-        self.nr = nr
 
     def setESC(self, Re):
         '''
@@ -296,7 +305,7 @@ class UAVModel:
         print(f"{'-'*40}")
         print("")
 
-    def calculate_performance(self):
+    def calculate_performance(self, verbose=False):
         '''
         Calculate the performance of the UAV
         :return: None
@@ -318,7 +327,8 @@ class UAVModel:
                                             self.Cb,
                                             self.Cmin,
                                             self.Rb,
-                                            self.Icontrol)
+                                            self.Icontrol,
+                                            verbose=verbose)
 
         self.T_hover = result[0]
         self.N_hover = result[1]
@@ -348,7 +358,8 @@ class UAVModel:
                                                  self.Cb,
                                                  self.Cmin,
                                                  self.Rb,
-                                                 self.Icontrol)
+                                                 self.Icontrol,
+                                                 verbose=verbose)
 
         self.T_max = result[0]
         self.N_max = result[1]
@@ -379,7 +390,8 @@ class UAVModel:
                                                   self.Cmin,
                                                   self.Rb,
                                                   self.Icontrol,
-                                                  self.safe_duty_cycle)
+                                                  self.safe_duty_cycle,
+                                                  verbose=verbose)
 
         self.T_payload = result[0]
         self.N_payload = result[1]
@@ -414,7 +426,8 @@ class UAVModel:
                                                   self.Cb,
                                                   self.Cmin,
                                                   self.Rb,
-                                                  self.Icontrol)
+                                                  self.Icontrol,
+                                                  verbose=verbose)
 
         self.max_distance = result[0]
         self.max_speed = result[1]
@@ -483,22 +496,22 @@ if __name__ == '__main__':
     # Model Validation
     # Validation of Table 2, 3, 4, 5
     uav = UAVModel()
-    uav.setAll(temp=25, h=10, mass=14.7 / uav.g, Dp=10, Hp=4.5, Bp=2, Kv0=890, Um0=10, Im0=0.5,
-               Rm=0.101, nr=4, Re=0.008, Ub=12, Cb=5000, Cmin=5000 * 0.2, Rb=0.01, Icontrol=1, safe_duty_cycle=0.8)
+    uav.setAll(temp=25, h=10, mass=14.7 / uav.g, nr=4, Dp=10, Hp=4.5, Bp=2, Kv0=890, Um0=10, Im0=0.5,
+               Rm=0.101, Re=0.008, Ub=12, Cb=5000, Cmin=5000 * 0.2, Rb=0.01, Icontrol=1, safe_duty_cycle=0.8)
     uav.show_config()
     uav.calculate_performance()
     uav.show_performance()
 
     # Validation of Table 6
     uav1 = UAVModel()
-    uav1.setAll(temp=25, h=10, mass=14.7 / uav.g, Dp=10, Hp=4.5, Bp=2, Kv0=890, Um0=10, Im0=0.5,
-                Rm=0.101, nr=4, Re=0.008, Ub=11.1, Cb=5000, Cmin=5000 * 0.2, Rb=0.0078, Icontrol=1, safe_duty_cycle=0.8)
+    uav1.setAll(temp=25, h=10, mass=14.7 / uav.g, nr=4, Dp=10, Hp=4.5, Bp=2, Kv0=890, Um0=10, Im0=0.5,
+                Rm=0.101, Re=0.008, Ub=11.1, Cb=5000, Cmin=5000 * 0.2, Rb=0.0078, Icontrol=1, safe_duty_cycle=0.8)
     uav2 = UAVModel()
-    uav2.setAll(temp=25, h=10, mass=28.763 / uav.g, Dp=13, Hp=4.5, Bp=2, Kv0=415, Um0=10, Im0=0.3,
-                Rm=0.2425, nr=4, Re=0.008, Ub=22.2, Cb=5500, Cmin=5000 * 0.2, Rb=0.0114, Icontrol=1, safe_duty_cycle=0.8)
+    uav2.setAll(temp=25, h=10, mass=28.763 / uav.g, nr=4, Dp=13, Hp=4.5, Bp=2, Kv0=415, Um0=10, Im0=0.3,
+                Rm=0.2425, Re=0.008, Ub=22.2, Cb=5500, Cmin=5000 * 0.2, Rb=0.0114, Icontrol=1, safe_duty_cycle=0.8)
     uav3 = UAVModel()
-    uav3.setAll(temp=25, h=10, mass=29.4 / uav.g, Dp=12, Hp=5.5, Bp=2, Kv0=480, Um0=10, Im0=0.4,
-                Rm=0.178, nr=4, Re=0.006, Ub=22.2, Cb=5000, Cmin=5000 * 0.2, Rb=0.0168, Icontrol=1, safe_duty_cycle=0.8)
+    uav3.setAll(temp=25, h=10, mass=29.4 / uav.g, nr=4, Dp=12, Hp=5.5, Bp=2, Kv0=480, Um0=10, Im0=0.4,
+                Rm=0.178, Re=0.006, Ub=22.2, Cb=5000, Cmin=5000 * 0.2, Rb=0.0168, Icontrol=1, safe_duty_cycle=0.8)
     
     uav1.calculate_performance()
     uav2.calculate_performance()
@@ -513,8 +526,8 @@ if __name__ == '__main__':
 
     # Validation with DJI Inspire
     dji = UAVModel()
-    dji.setAll(temp=25, h=10, mass=28.73 / uav.g, Dp=13, Hp=4.5, Bp=2, Kv0=350, Um0=10, Im0=0.3,
-               Rm=0.21, nr=4, Re=0.02, Ub=24, Cb=5700, Cmin=5000 * 0.15, Rb=0.12, Icontrol=1, safe_duty_cycle=0.7)
+    dji.setAll(temp=25, h=10, mass=28.73 / uav.g, nr=4, Dp=13, Hp=4.5, Bp=2, Kv0=350, Um0=10, Im0=0.3,
+               Rm=0.21, Re=0.02, Ub=24, Cb=5700, Cmin=5000 * 0.15, Rb=0.12, Icontrol=1, safe_duty_cycle=0.7)
     print("DJI Inspire")
     dji.show_config()
     dji.calculate_performance()

@@ -1,0 +1,314 @@
+{
+    "zeee_1500_2_pack": {
+        "category": "battery",
+        "attributes": {
+            "voltage": {
+                "value": 7.4,
+                "units": "V"
+            },
+            "capacity": {
+                "value": 3000,
+                "units": "mAh"
+            },
+            "min_capacity": {
+                "value": 600,
+                "units": "mAh"
+            },
+            "resistance": {
+                "value": 0.2,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.176,
+                "units": "kg"
+            },
+            "price": {
+                "value": 32.99,
+                "units": "EUR"
+            }
+        }
+    },
+    "tatoo_2300": {
+        "category": "battery",
+        "attributes": {
+            "voltage": {
+                "value": 11.1,
+                "units": "V"
+            },
+            "capacity": {
+                "value": 2300,
+                "units": "mAh"
+            },
+            "min_capacity": {
+                "value": 460,
+                "units": "mAh"
+            },
+            "resistance": {
+                "value": 0.2,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.1822,
+                "units": "kg"
+            },
+            "price": {
+                "value": 26.19,
+                "units": "EUR"
+            }
+        }
+    },
+    "hrb_5000": {
+        "category": "battery",
+        "attributes": {
+            "voltage": {
+                "value": 11.1,
+                "units": "V"
+            },
+            "capacity": {
+                "value": 5000,
+                "units": "mAh"
+            },
+            "min_capacity": {
+                "value": 1000,
+                "units": "mAh"
+            },
+            "resistance": {
+                "value": 0.2,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.376,
+                "units": "kg"
+            },
+            "price": {
+                "value": 45.99,
+                "units": "EUR"
+            }
+        }
+    },
+    "zeee_8000": {
+        "category": "battery",
+        "attributes": {
+            "voltage": {
+                "value": 11.1,
+                "units": "V"
+            },
+            "capacity": {
+                "value": 8000,
+                "units": "mAh"
+            },
+            "min_capacity": {
+                "value": 1600,
+                "units": "mAh"
+            },
+            "resistance": {
+                "value": 0.2,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.493,
+                "units": "kg"
+            },
+            "price": {
+                "value": 79.99,
+                "units": "EUR"
+            }
+        }
+    },
+    "tatoo_1300": {
+        "category": "battery",
+        "attributes": {
+            "voltage": {
+                "value": 22.2,
+                "units": "V"
+            },
+            "capacity": {
+                "value": 1300,
+                "units": "mAh"
+            },
+            "min_capacity": {
+                "value": 260,
+                "units": "mAh"
+            },
+            "resistance": {
+                "value": 0.2,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.212,
+                "units": "kg"
+            },
+            "price": {
+                "value": 41.62,
+                "units": "EUR"
+            }
+        }
+    },
+    "motor_v3008": {
+        "category": "motor",
+        "attributes": {
+            "kv": {
+                "value": 1350,
+                "units": "rpm/V"
+            },
+            "no-load voltage": {
+                "value": 10,
+                "units": "V"
+            },
+            "no-load current": {
+                "value": 1.18,
+                "units": "A"
+            },
+            "resistance": {
+                "value": 0.1,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.07,
+                "units": "kg"
+            },
+            "price": {
+                "value": 28.39,
+                "units": "USD"
+            }
+        }
+    },
+    "motor_v2808": {
+        "category": "motor",
+        "attributes": {
+            "kv": {
+                "value": 1950,
+                "units": "rpm/V"
+            },
+            "no-load voltage": {
+                "value": 10,
+                "units": "V"
+            },
+            "no-load current": {
+                "value": 2.45,
+                "units": "A"
+            },
+            "resistance": {
+                "value": 0.1,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.061,
+                "units": "kg"
+            },
+            "price": {
+                "value": 24.83,
+                "units": "USD"
+            }
+        }
+    },
+    "propeller_10x45": {
+        "category": "propeller",
+        "attributes": {
+            "diameter": {
+                "value": 10,
+                "units": "in"
+            },
+            "pitch": {
+                "value": 4.5,
+                "units": "in"
+            },
+            "num_blades": {
+                "value": 2,
+                "units": "int"
+            },
+            "mass": {
+                "value": 0.01,
+                "units": "kg"
+            },
+            "price": {
+                "value": 5,
+                "units": "USD"
+            }
+        }
+    },
+    "propeller_8x45": {
+        "category": "propeller",
+        "attributes": {
+            "diameter": {
+                "value": 8,
+                "units": "in"
+            },
+            "pitch": {
+                "value": 4.5,
+                "units": "in"
+            },
+            "num_blades": {
+                "value": 2,
+                "units": "int"
+            },
+            "mass": {
+                "value": 0.01,
+                "units": "kg"
+            },
+            "price": {
+                "value": 5,
+                "units": "USD"
+            }
+        }
+    },
+    "esc_30": {
+        "category": "esc",
+        "attributes": {
+            "resistance": {
+                "value": 0.01,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.01,
+                "units": "kg"
+            },
+            "price": {
+                "value": 10,
+                "units": "USD"
+            }
+        }
+    },
+    "frame_450": {
+        "category": "frame",
+        "attributes": {
+            "diagonal": {
+                "value": 450,
+                "units": "mm"
+            },
+            "number_of_rotors": {
+                "value": 4,
+                "units": "int"
+            },
+            "mass": {
+                "value": 0.4,
+                "units": "kg"
+            },
+            "price": {
+                "value": 20,
+                "units": "USD"
+            }
+        }
+    },
+    "frame_250": {
+        "category": "frame",
+        "attributes": {
+            "diagonal": {
+                "value": 250,
+                "units": "mm"
+            },
+            "number_of_rotors": {
+                "value": 4,
+                "units": "int"
+            },
+            "mass": {
+                "value": 0.2,
+                "units": "kg"
+            },
+            "price": {
+                "value": 15,
+                "units": "USD"
+            }
+        }
+    }
+}

@@ -164,25 +164,32 @@ def motor_current(Kv0, Um0, Im0, Rm, M):
 # ESC
 
 
-def duty_cycle(Re, Um, Im, Ub):
+def duty_cycle(Re, Um, Im, Ub, limit=True):
     '''
     Calculate the duty cycle of the motor
     :param Re: Equivalent resistance of the motor
     :param Um: Motor voltage
     :param Im: Motor current
     :param Ub: Battery voltage
+    :param limit: Limit duty cycle to 1, for the solver put limit = False
     :return: Duty cycle'''
 
     sigma = (Um + Im * Re) / Ub
 
-    if isinstance(sigma, int) or isinstance(sigma, float):
-        if sigma > 1:
-            sigma = 1
-            print("Necessary duty cycle is greater than 1. Limiting duty cycle to 1")
-    else:
-        sigma = np.where(sigma > 1, 1, sigma)
-        if np.any(sigma > 1):
-            print("Some necessary duty cycles are greater than 1. Limiting duty cycles to 1")
+    # necessary for the solver to work with limit = False
+    if limit:
+        if isinstance(sigma, int) or isinstance(sigma, float):
+            if sigma > 1:
+                sigma = 1
+            if sigma < 0:
+                sigma = 0
+        else:
+            if np.any(sigma > 1):
+                print("Some necessary duty cycles are greater than 1. Limiting duty cycles to 1")
+                sigma[sigma > 1] = 1
+            if np.any(sigma < 0):
+                print("Some necessary duty cycles are less than 0. Limiting duty cycles to 0")
+                sigma[sigma < 0] = 0
 
     return sigma
 
@@ -400,7 +407,7 @@ def calculate_max_thrust_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub,
 
     def equations(x):
 
-        duty = duty_cycle(Re, x[0], x[1], Ub)
+        duty = duty_cycle(Re, x[0], x[1], Ub, limit=False)
         Um = motor_voltage(Kv0, Um0, Im0, Rm, x[2], x[3])
         Im = motor_current(Kv0, Um0, Im0, Rm, x[2])
         M = propeller_torque(Dp, Hp, Bp, x[3], pho)
@@ -428,13 +435,9 @@ def calculate_max_thrust_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub,
 
     if verbose:
         print('The solution on Maximum Thrust is:')
-    if verbose:
         print('Motor voltage: ', Um, ' V')
-    if verbose:
         print('Motor current: ', Im, ' A')
-    if verbose:
         print('Motor torque: ', M, ' Nm')
-    if verbose:
         print('Motor speed: ', N, ' rpm')
 
     # calculate esc current
@@ -478,11 +481,10 @@ def calculate_max_thrust_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub,
     return T, N, M, Um, Im, max_duty, Ue, Ie, Ib, t_hover, eta, max_payload, max_pitch
 
 
-def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub, Cb, Cmin, Rb, Icontrol, safe_duty_cycle = 0.8, verbose=False):
+def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub, Cb, Cmin, Rb, Icontrol, safe_duty_cycle=0.8, verbose=False):
 
     if verbose:
         print("")
-    if verbose:
         print("Calculating maximum payload mode")
 
     # on max payload safe_duty_cycle
@@ -490,7 +492,7 @@ def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub
 
     def equations(x):
 
-        duty = duty_cycle(Re, x[0], x[1], Ub)
+        duty = duty_cycle(Re, x[0], x[1], Ub, limit=False)
         Um = motor_voltage(Kv0, Um0, Im0, Rm, x[2], x[3])
         Im = motor_current(Kv0, Um0, Im0, Rm, x[2])
         M = propeller_torque(Dp, Hp, Bp, x[3], pho)
@@ -518,25 +520,28 @@ def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub
 
     if verbose:
         print('The solution on Maximum Payload is:')
-    if verbose:
         print('Motor voltage: ', round(Um, 3), ' V')
-    if verbose:
         print('Motor current: ', round(Im, 3), ' A')
-    if verbose:
         print('Motor torque: ', round(M, 3), ' Nm')
-    if verbose:
         print('Motor speed: ', round(N, 3), ' rpm')
 
     # calculate thrust
     T = propeller_thrust(Dp, Hp, Bp, N, pho)
 
     # calculate max payload
-    max_payload = (T * nr) - G
+    max_payload = ((T * nr) - G) / 9.80665
+    if max_payload < 0:
+        max_payload = 0
+
     if verbose:
         print('Maximum payload: ', round(max_payload, 3), ' kg')
 
     # calculate max pitch
-    max_pitch = arccos(G / (T * nr))
+    cos_pitch = G / (T * nr)
+    if cos_pitch > 1 or cos_pitch < -1:
+        cos_pitch = 1
+    max_pitch = arccos(cos_pitch)
+
     if verbose:
         print('Maximum pitch: ', round(max_pitch, 3), ' rad')
 
@@ -576,6 +581,16 @@ def calculate_max_payload_mode(pho, G, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub
 
 def calculate_vel_and_distance(max_pitch, pho, G, S, C1, C2, Dp, Hp, Bp, Kv0, Um0, Im0, Rm, nr, Re, Ub, Cb, Cmin, Rb, Icontrol, verbose=False):
 
+    if verbose:
+        print("")
+        print("Calculating maximum velocity and distance")
+
+    if max_pitch is None or max_pitch <= 0 or np.isnan(max_pitch):
+        max_distance = np.nan
+        max_velocity = np.nan
+        print("Error: Maximum pitch not valid")
+        return max_distance, max_velocity
+
     pitch = np.linspace(0, max_pitch, 1000)
 
     # calculate speed
@@ -609,8 +624,12 @@ def calculate_vel_and_distance(max_pitch, pho, G, S, C1, C2, Dp, Hp, Bp, Kv0, Um
 
     # calculate max distance
     max_distance = np.max(60 * speed_arr * t_arr)
+    if verbose:
+        print("Maximum distance: ", round(max_distance, 3), " m")
 
     # calculate max velocity
     max_velocity = np.max(speed_arr)
+    if verbose:
+        print("Maximum velocity: ", round(max_velocity, 3), " m/s")
 
     return max_distance, max_velocity
