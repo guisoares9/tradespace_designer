@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import itertools
+import json
 
 
 class TradespaceDesigner:
@@ -48,6 +49,51 @@ class TradespaceDesigner:
 
         return
 
+    def get_attr_by_name(self, name, attribute):
+        if self.design_components is None:
+            raise Exception("Warning: No design components have been added. Please add design components before calling this function")
+
+        if name not in self.design_components:
+            raise Exception(f"Warning: {name} not found in the design components dictionary")
+
+        if attribute not in self.design_components[name]['attributes']:
+            raise Exception(f"Warning: {attribute} not found in the attributes dictionary for {name}")
+
+        return self.design_components[name]['attributes'][attribute]['value']
+
+    def sum_attributes_by_category(self, category: str, attribute: str):
+        if self.design_components is None:
+            raise Exception("Warning: No design components have been added. Please add design components before calling this function")
+
+        # get categories
+        categories = list(dict.fromkeys(
+            [self.design_components[option]['category'] for option in self.design_components]))
+
+        if category not in categories:
+            raise Exception(f"Warning: {category} not found in the categories dictionary")
+
+        # get attribute keys
+        attributes = list(dict.fromkeys(
+            [self.design_components[option]['attributes'][attribute] for option in self.design_components if self.design_components[option]['category'] == category]))
+
+        if attribute not in attributes:
+            raise Exception(f"Warning: {attribute} not found in the attributes dictionary for {category}")
+
+        # get the sum of the attributes
+        return sum([self.get_attr_by_name(option, attribute) for option in self.design_components if self.design_components[option]['category'] == category])
+
+    def sum_attributes_by_names(self, names: list, attribute: str):
+
+        # get attribute keys
+        attributes = list(dict.fromkeys(
+            [self.design_components[option]['attributes'][attribute] for option in self.design_components if option in names]))
+
+        if attribute not in attributes:
+            raise Exception(f"Warning: {attribute} not found in the attributes dictionary for {names}")
+
+        # get the sum of the attributes
+        return sum([self.get_attr_by_name(option, attribute) for option in self.design_components if option in names])
+
     def generate_tradespace(self):
 
         # Get the unique categories with the same order as the design variables
@@ -64,6 +110,17 @@ class TradespaceDesigner:
 
         return
 
+    def save_components_to_json(self, filename):
+
+        if self.design_components is None:
+            raise Exception("Warning: No design components have been added. Please add design components before calling this function")
+
+        with open(filename, 'w') as f:
+            json.dump(self.design_components, f, indent=4)
+
+        return
+
+
     def calculate_sau(self):
 
         # iterate over the performance variables
@@ -79,6 +136,14 @@ class TradespaceDesigner:
         for name, item in self.performance_items.items():
             self.tradespace_df['MAU'] += item['weight'] * \
                 self.tradespace_df['SAU_' + name]
+
+    def save_tradespace(self, filename):
+
+        if self.tradespace_df is None:
+            raise Exception("Warning: No tradespace has been generated. Please generate a tradespace before calling this function")
+        self.tradespace_df.to_csv(filename, index=True)
+
+        return
 
     def plot_tradespace(self, x_name, y_name, block=True, labels=False, hexbin=True):
 
@@ -135,13 +200,9 @@ class TradespaceDesigner:
             cells=dict(values=[df[col] for col in df.columns], fill_color='lavender', align='left'))
         ])
 
-        # Create subplots and add figures to the subplots
-        fig = make_subplots(rows=1, cols=2, subplot_titles=('Figure 1', 'Figure 2'))
-        fig.add_trace(pareto_fig.data[0], row=1, col=1)
-        fig.add_trace(csv_fig.data[0], row=1, col=2)
-
         # Set the layout of the subplots
-        fig.update_layout(title='Drone Designer')
+        csv_fig.update_layout(title='Drone Designer')
 
         # Show the figure
-        fig.show()
+        # csv_fig.show()
+        pareto_fig.show()
