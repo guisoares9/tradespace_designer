@@ -489,6 +489,10 @@ class UAVModel:
         print(f"{'Maximum speed:':<30}{self.max_speed:>10.3f} m/s")
         print(f"{'-'*40}")
         print("")
+    
+    def show_all(self):
+        self.show_config()
+        self.show_performance()
 
 
 if __name__ == '__main__':
