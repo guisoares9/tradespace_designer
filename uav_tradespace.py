@@ -118,7 +118,7 @@ class UAVTradespacer:
 
     def generate_tradespace(self):
         # generate tradespace with the all possible combinations of design components
-        self.td.generate_tradespace()
+        self.td.generate_design_tradespace()
 
         td = self.td
 
@@ -229,7 +229,7 @@ class UAVTradespacer:
         # categories = list(dict.fromkeys([self.td.design_components[option]['category'] for option in self.td.design_components]))
         categories = [
             "mass",
-            # "number_of_rotors",/
+            "number_of_rotors",
             "kv",
             "voltage",
             "capacity",
@@ -240,19 +240,32 @@ class UAVTradespacer:
             "max_flight_time",
         ]
 
+        if x_name is None:
+            x_is_category = True
+        else:
+            x_is_category = False
+
         # make a subplot for each category
         from plotly.subplots import make_subplots
 
         fig = make_subplots(len(categories), 1, subplot_titles=categories)
 
         # get figures
-        for category in categories:
-            trace = self.td.plot_tradespace_plotly(
-                x_name, y_name, color_by_attribute=True, attribute_name=category, block=False
-            )
-            fig.add_trace(trace, row=categories.index(category) + 1, col=1)
+        color_len = 1 / len(categories) - 0.01
+        color_y = 1.0 - color_len / 2
+        for index, category in enumerate(categories):
 
-        fig.update_layout(height=3000, width=1080, title_text="Stacked Subplots")
+            if x_is_category:
+                x_name = category
+
+            designs_trace, pareto_trace = self.td.plot_tradespace_plotly(
+                x_name, y_name, color_by_attribute=True, attribute_name=category, block=False, cbar_y=color_y, cbar_len=color_len, showlegend=False
+            )
+            fig.add_trace(pareto_trace, row=index+1, col=1)
+            fig.add_trace(designs_trace, row=index+1, col=1)
+            color_y -= 1 / len(categories) 
+
+        fig.update_layout(height=3000, width=1080, title_text="MAU per attribute", showlegend=False)
         fig.show()
 
     def save_components_to_json(self, filename):

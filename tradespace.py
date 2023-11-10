@@ -146,7 +146,7 @@ class TradespaceDesigner:
             ]
         )
 
-    def generate_tradespace(self):
+    def generate_design_tradespace(self):
         # Get the unique categories with the same order as the design variables
         categories = list(
             dict.fromkeys(
@@ -208,7 +208,25 @@ class TradespaceDesigner:
 
         return
 
-    def plot_tradespace(self, x_name, y_name, block=True, labels=False, hexbin=True):
+    def detect_pareto(self, x_name='price', y_name='MAU'):
+
+        for index, row in self.tradespace_df.iterrows():
+            
+            # get the x axis of the pareto search space
+            x = row[x_name]
+            y = row[y_name]
+            
+            # check if the point is dominated by any other point
+            if any((self.tradespace_df[x_name] < x) & (self.tradespace_df[y_name] > y)):
+                row['pareto'] = False
+            else:
+                row['pareto'] = True
+
+            # update the row
+            self.tradespace_df.loc[index, 'pareto'] = row['pareto']
+        return
+
+    def plot_tradespace(self, x_name='price', y_name='MAU', block=True, labels=False, hexbin=True):
         # Plot the Maximum Payload vs MAU
         fig, ax = plt.subplots()
         ax.scatter(
@@ -253,7 +271,12 @@ class TradespaceDesigner:
         color_by_attribute=False,
         attribute_name="",
         block=True,
+        cbar_y=0.05,
+        cbar_len= 0.9,
+        pareto=True,
+        showlegend=True,
     ):
+        trace_list = []
         # check if the color value is string
         if color_by_attribute:
             if type(self.tradespace_df[attribute_name][0]) is str:
@@ -265,7 +288,7 @@ class TradespaceDesigner:
                 color_value = self.tradespace_df[attribute_name]
 
         if color_by_attribute:
-            pareto_scatter = go.Scatter(
+            designs_scatter = go.Scatter(
                 x=self.tradespace_df[x_name],
                 y=self.tradespace_df[y_name],
                 mode="markers",
@@ -274,17 +297,17 @@ class TradespaceDesigner:
                     color=color_value,
                     colorscale='Viridis',
                     showscale=True,
-                    colorbar=dict(len=1.05, x=0.35, y=0.49),
+                    colorbar=dict(len=cbar_len, y=cbar_y),
                 ),
                 text=[f"ID: {i}" for i in range(len(self.tradespace_df))],
                 hovertemplate="<b>%{text}</b><br><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>",
+                name=attribute_name,
             )
-            # Create the scatter plot
-            pareto_fig = go.Figure(data=pareto_scatter)
+            trace_list.append(designs_scatter)
 
         else:
             # Create the scatter plot
-            pareto_scatter = go.Scatter(
+            designs_scatter = go.Scatter(
                 x=self.tradespace_df[x_name],
                 y=self.tradespace_df[y_name],
                 mode="markers",
@@ -292,18 +315,47 @@ class TradespaceDesigner:
                     size=10,
                     color="blue",
                     symbol="square",
-                    colorbar=dict(len=1.05, x=0.35, y=0.49),
                 ),
                 text=[f"ID: {i}" for i in range(len(self.tradespace_df))],
                 hovertemplate="<b>%{text}</b><br><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>",
+                name='All Designs',
             )
-            pareto_fig = go.Figure(data=pareto_scatter)
+            trace_list.append(designs_scatter)
+
+        if pareto:
+            x = self.tradespace_df[self.tradespace_df['pareto'] == True ][x_name]
+            y = self.tradespace_df[self.tradespace_df['pareto'] == True ][y_name]
+            ids = self.tradespace_df[self.tradespace_df['pareto'] == True ].index
+            pareto_front_scatter = go.Scatter(
+                x=x,
+                y=y,
+                mode="markers",
+                marker=dict(
+                    size=13,
+                    color="red",
+                ),
+                text=[f"ID: {i}" for i in ids],
+                hovertemplate="<b>%{text}</b><br><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>",
+                name='Pareto Front',
+            )
+            trace_list.append(pareto_front_scatter)
+
+        pareto_fig = go.Figure(data=trace_list)
 
         # Update the layout
         pareto_fig.update_layout(
-            xaxis=dict(title=x_name), yaxis=dict(title=y_name), showlegend=False
+            xaxis=dict(title=x_name), yaxis=dict(title=y_name), showlegend=showlegend
         )
 
+        # Show the figure
+        if block:
+            pareto_fig.show()
+
+        return designs_scatter, pareto_front_scatter
+
+    def csv_plotly(self, block=True):
+
+        # Get the tradespace dataframe
         df = self.tradespace_df
 
         # Create a Plotly Table figure
@@ -326,10 +378,7 @@ class TradespaceDesigner:
 
         # Set the layout of the subplots
         csv_fig.update_layout(title="Drone Designer")
-
-        # Show the figure
         if block:
-            pareto_fig.show()
             csv_fig.show()
 
-        return pareto_scatter
+        return csv_fig
