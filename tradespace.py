@@ -248,6 +248,24 @@ class TradespaceDesigner:
                 item["weight"] * self.tradespace_df["SAU_" + name]
             )
 
+    def generate_performance_tradespace(self, clip_max=True, clip_min=True, restrictive=True):
+        # check if the tradespace has been generated
+        if self.tradespace_df is None:
+            raise Exception(
+                "Warning: No tradespace has been generated. Please generate a tradespace before calling this function"
+            )
+
+        # calculate the SAU
+        self.calculate_sau(clip_max=clip_max, clip_min=clip_min)
+
+        # calculate the MAU
+        self.calculate_mau(restrictive=restrictive)
+
+        # calculate the pareto front
+        self.detect_pareto()
+
+        return
+
     def save_tradespace(self, filename):
         if self.tradespace_df is None:
             raise Exception(
@@ -382,7 +400,7 @@ class TradespaceDesigner:
                 marker=dict(
                     size=10,
                     color=color_value,
-                    colorscale='Viridis',
+                    colorscale='Plotly3',
                     showscale=True,
                     colorbar=dict(len=cbar_len, y=cbar_y),
                 ),
@@ -418,14 +436,34 @@ class TradespaceDesigner:
                 y=y,
                 mode="markers",
                 marker=dict(
-                    size=13,
-                    color="red",
+                    size=14,
+                    color="black",
                 ),
                 text=[f"ID: {i}" for i in ids],
                 hovertemplate="<b>%{text}</b><br><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>",
                 name='Pareto Front',
             )
             trace_list.append(pareto_front_scatter)
+
+            near_but_not_pareto_ids = (self.tradespace_df['near_pareto'] == True) & (self.tradespace_df['pareto'] == False)
+
+            x = self.tradespace_df[near_but_not_pareto_ids][x_name]
+            y = self.tradespace_df[near_but_not_pareto_ids][y_name]
+            ids = self.tradespace_df[near_but_not_pareto_ids].index
+
+            near_pareto_front_scatter = go.Scatter(
+                x=x,
+                y=y,
+                mode="markers",
+                marker=dict(
+                    size=14,
+                    color="gray"
+                ),
+                text=[f"ID: {i}" for i in ids],
+                hovertemplate="<b>%{text}</b><br><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>",
+                name='Near Pareto Front',
+            )
+            trace_list.append(near_pareto_front_scatter)
 
         pareto_fig = go.Figure(data=trace_list)
 
@@ -441,15 +479,15 @@ class TradespaceDesigner:
         if block:
             pareto_fig.show()
 
-        return designs_scatter, pareto_front_scatter
+        return designs_scatter, pareto_front_scatter, near_pareto_front_scatter
 
     def plot_price_vs_mau(self, desired_price_range=[], block=True):
 
         # generate scatter plot
-        designs_scatter, pareto_front_scatter = self.plot_tradespace_plotly('price', 'MAU', block=False)
+        designs_scatter, pareto_front_scatter, near_pareto_front_scatter = self.plot_tradespace_plotly('price', 'MAU', block=False)
 
         # create a figure with the scatter plot
-        fig = go.Figure(data=[designs_scatter, pareto_front_scatter])
+        fig = go.Figure(data=[designs_scatter, near_pareto_front_scatter, pareto_front_scatter])
 
         # change y axis limits to 0 to 1
         fig.update_yaxes(range=[-0.05, 1])

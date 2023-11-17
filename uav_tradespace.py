@@ -1,3 +1,4 @@
+import numpy as np
 from tradespace import TradespaceDesigner
 from uav import UAVModel
 # make a subplot for each category
@@ -134,7 +135,7 @@ class UAVTradespacer:
         )
         return
 
-    def generate_tradespace(self):
+    def generate_tradespace(self, sensitive_analysis=True):
         # generate tradespace with the all possible combinations of design components
         self.td.generate_design_tradespace()
 
@@ -248,14 +249,67 @@ class UAVTradespacer:
             # append uav to the list
             self.uav_list.append(uav)
 
-        # calculate the sau
-        self.td.calculate_sau()
+        if sensitive_analysis:
+            
+            # store the original datafrane
+            original_tradespace_df = td.tradespace_df.copy()
 
-        # calculate the mau
-        self.td.calculate_mau()
+            # iterate 100 times to change the values of design and performance variables to see how the performance changes
+            near_pareto_unique_ids_dict = {}
+            for i in range(10):
+                random_coef = lambda: np.random.uniform(0.8, 1.2)
+                
+                # change design variables
+                for index, row in td.tradespace_df.iterrows():
+                    for attribute in td.design_components:
+                        continue
+                        td.tradespace_df.loc[index, attribute] = row[attribute] * random_coef()
 
-        # detect pareto front
-        self.td.detect_pareto()
+                # change performance variables
+                for index, row in td.tradespace_df.iterrows():
+                    for attribute in td.performance_items:
+                        td.tradespace_df.loc[index, attribute] = row[attribute] * random_coef()
+                
+                # calculate performance
+                self.td.generate_performance_tradespace()
+            
+                # store the designs that are in the pareto front with each id
+                pareto_ids = self.td.tradespace_df[self.td.tradespace_df["pareto"] == True]
+                maus = self.td.tradespace_df[self.td.tradespace_df["pareto"] == True]["MAU"]
+
+                # dict to save the id, the max and min MAU
+                for index, pareto_id in enumerate(pareto_ids.index):
+                    if pareto_id not in near_pareto_unique_ids_dict:
+                        near_pareto_unique_ids_dict[pareto_id] = {"max": maus.iloc[index], "min": maus.iloc[index]}
+                    else:
+                        if maus.iloc[index] > near_pareto_unique_ids_dict[pareto_id]["max"]:
+                            near_pareto_unique_ids_dict[pareto_id]["max"] = maus.iloc[index]
+                        elif maus.iloc[index] < near_pareto_unique_ids_dict[pareto_id]["min"]:
+                            near_pareto_unique_ids_dict[pareto_id]["min"] = maus.iloc[index]
+            
+            # reset the values of design and performance variables
+            self.td.tradespace_df = original_tradespace_df.copy()
+            
+            self.td.generate_performance_tradespace()
+
+            # add possible pareto ids to the tradespace
+            for index, row in self.td.tradespace_df.iterrows():
+                if index in near_pareto_unique_ids_dict:
+                    self.td.tradespace_df.loc[index, "near_pareto"] = True
+                else:
+                    self.td.tradespace_df.loc[index, "near_pareto"] = None
+            
+            # add the max and min MAU to the tradespace
+            for index, row in self.td.tradespace_df.iterrows():
+                if index in near_pareto_unique_ids_dict:
+                    self.td.tradespace_df.loc[index, "max_mau"] = near_pareto_unique_ids_dict[index]["max"]
+                    self.td.tradespace_df.loc[index, "min_mau"] = near_pareto_unique_ids_dict[index]["min"]
+                else:
+                    self.td.tradespace_df.loc[index, "max_mau"] = None
+                    self.td.tradespace_df.loc[index, "min_mau"] = None
+
+        else:
+            self.td.generate_performance_tradespace()
 
         # save the tradespace to a csv file
         self.td.save_tradespace('tradespace.csv')
@@ -311,12 +365,13 @@ class UAVTradespacer:
             if x_is_category:
                 x_name = category
 
-            designs_trace, pareto_trace = self.td.plot_tradespace_plotly(
+            designs_trace, pareto_trace, near_pareto_trace = self.td.plot_tradespace_plotly(
                 x_name, y_name, color_by_attribute=True, attribute_name=category, block=False, cbar_y=color_y, cbar_len=color_len, showlegend=False
             )
             fig.add_trace(pareto_trace, row=index+1, col=1)
+            fig.add_trace(near_pareto_trace, row=index+1, col=1)
             fig.add_trace(designs_trace, row=index+1, col=1)
-            color_y -= 1.034 * pixels_per_plot / total_pixels
+            color_y -= 1.041 * pixels_per_plot / total_pixels
 
             # add yaxis name
             fig.update_yaxes(title_text=y_name, row=index+1, col=1)
@@ -343,10 +398,11 @@ class UAVTradespacer:
         fig = make_subplots(len(categories), 1, subplot_titles=categories_to_title)
 
         for index, category in enumerate(categories):
-            designs_trace, pareto_trace = self.td.plot_tradespace_plotly(
+            designs_trace, pareto_trace, near_pareto_trace = self.td.plot_tradespace_plotly(
                 "price", category, block=False, showlegend=False
             )
             fig.add_trace(designs_trace, row=index+1, col=1)
+            fig.add_trace(near_pareto_trace, row=index+1, col=1)
             fig.add_trace(pareto_trace, row=index+1, col=1)
 
             # add horizontal line to show the desired min and max performance
