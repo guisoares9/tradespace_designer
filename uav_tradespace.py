@@ -1,6 +1,7 @@
 from tradespace import TradespaceDesigner
 from uav import UAVModel
-
+# make a subplot for each category
+from plotly.subplots import make_subplots
 
 class UAVTradespacer:
     def __init__(self):
@@ -10,11 +11,28 @@ class UAVTradespacer:
         # init uav list
         self.uav_list = []
 
+        self.desire_price_range = []
+
         return
 
     def add_performance_variable(self, name, min_value, max_value, units, weight):
         # add performance variable to the tradespace designer
         self.td.add_performance_variable(name, min_value, max_value, units, weight)
+        return
+
+    def set_desired_price_range(self, min_price, max_price):
+
+        # assert that its int float or None
+        if not isinstance(min_price, (int, float, type(None))):
+            raise TypeError("The minimum price must be an integer or a float.")
+        if not isinstance(max_price, (int, float, type(None))):
+            raise TypeError("The maximum price must be an integer or a float.")
+
+        # check if the price range is valid
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise ValueError("The minimum price cannot be higher than the maximum price.")
+
+        self.desire_price_range = [min_price, max_price]
         return
 
     def add_frame(self, name, Df, nr, mass, price):
@@ -203,9 +221,17 @@ class UAVTradespacer:
             # add design variables to the tradespace
             td.tradespace_df.loc[index, "mass"] = uav.G / uav.g
             td.tradespace_df.loc[index, "number_of_rotors"] = uav.nr
+            td.tradespace_df.loc[index, "prop_diameter"] = uav.Dp
+            td.tradespace_df.loc[index, "prop_pitch"] = uav.Hp
+            td.tradespace_df.loc[index, "prop_blades"] = uav.Bp
+            td.tradespace_df.loc[index, "motor_resistance"] = uav.Rm
             td.tradespace_df.loc[index, "kv"] = uav.Kv0
+            td.tradespace_df.loc[index, "esc_resistance"] = uav.Re
             td.tradespace_df.loc[index, "voltage"] = uav.Ub
             td.tradespace_df.loc[index, "capacity"] = uav.Cb
+            td.tradespace_df.loc[index, "battery_resistance"] = uav.Rb
+            td.tradespace_df.loc[index, "battery_min_capacity"] = uav.Cmin
+            td.tradespace_df.loc[index, "onboard_computer_current"] = uav.Icontrol
 
             # add price to the tradespace
             td.tradespace_df.loc[index, "price"] = price
@@ -222,6 +248,18 @@ class UAVTradespacer:
             # append uav to the list
             self.uav_list.append(uav)
 
+        # calculate the sau
+        self.td.calculate_sau()
+
+        # calculate the mau
+        self.td.calculate_mau()
+
+        # detect pareto front
+        self.td.detect_pareto()
+
+        # save the tradespace to a csv file
+        self.td.save_tradespace('tradespace.csv')
+
         return
 
     def plot_all_attributes(self, x_name, y_name):
@@ -230,29 +268,44 @@ class UAVTradespacer:
         categories = [
             "mass",
             "number_of_rotors",
+            "prop_diameter",
+            "prop_pitch",
             "kv",
             "voltage",
             "capacity",
-            "price",
             "max_flight_distance",
             "max_speed",
             "max_payload",
             "max_flight_time",
         ]
-
+        
+        categories_to_title = {
+            "mass": "Mass [kg]",
+            "number_of_rotors": "Number of rotors",
+            "prop_diameter": "Propeller diameter [in]",
+            "prop_pitch": "Propeller pitch [in]",
+            "kv": "Motor kv [rpm/V]",
+            "voltage": "Battery voltage [V]",
+            "capacity": "Battery capacity [mAh]",
+            "max_flight_distance": "Max flight distance [m]",
+            "max_speed": "Max speed [m/s]",
+            "max_payload": "Max payload [kg]",
+            "max_flight_time": "Max flight time [m]",
+        }
+            
         if x_name is None:
             x_is_category = True
         else:
             x_is_category = False
 
-        # make a subplot for each category
-        from plotly.subplots import make_subplots
+        fig = make_subplots(len(categories), 1, subplot_titles=list(categories_to_title.values()))
 
-        fig = make_subplots(len(categories), 1, subplot_titles=categories)
+        pixels_per_plot = 350
+        total_pixels = pixels_per_plot * len(categories)
 
         # get figures
-        color_len = 1 / len(categories) - 0.01
-        color_y = 1.0 - color_len / 2
+        color_len = 200 / total_pixels
+        color_y = (pixels_per_plot * len(categories)) / total_pixels - color_len / 2
         for index, category in enumerate(categories):
 
             if x_is_category:
@@ -263,10 +316,68 @@ class UAVTradespacer:
             )
             fig.add_trace(pareto_trace, row=index+1, col=1)
             fig.add_trace(designs_trace, row=index+1, col=1)
-            color_y -= 1 / len(categories) 
+            color_y -= 1.034 * pixels_per_plot / total_pixels
 
-        fig.update_layout(height=3000, width=1080, title_text="MAU per attribute", showlegend=False)
+            # add yaxis name
+            fig.update_yaxes(title_text=y_name, row=index+1, col=1)
+            fig.update_xaxes(title_text=x_name, row=index+1, col=1)
+
+        # add price range
+        fig = self.td.add_price_region(fig, self.desire_price_range)
+
+        fig.update_layout(height=pixels_per_plot*len(categories), width=1080, title_text="MAU per attribute", showlegend=False)
         fig.show()
+
+    def plot_price_vs_mau(self):
+        self.td.plot_price_vs_mau(desired_price_range=self.desire_price_range)
+        return
+
+    def plot_price_vs_performances(self):
+        categories = list(self.td.performance_items.keys())
+
+        # remove _, capitalize and add unit
+        categories_to_title = [
+            category.replace("_", " ").capitalize() + " [" + self.td.performance_items[category]["units"] + "]" for category in categories
+        ]
+
+        fig = make_subplots(len(categories), 1, subplot_titles=categories_to_title)
+
+        for index, category in enumerate(categories):
+            designs_trace, pareto_trace = self.td.plot_tradespace_plotly(
+                "price", category, block=False, showlegend=False
+            )
+            fig.add_trace(designs_trace, row=index+1, col=1)
+            fig.add_trace(pareto_trace, row=index+1, col=1)
+
+            # add horizontal line to show the desired min and max performance
+            fig.add_hline(
+                y=self.td.performance_items[category]["min_value"],
+                line_dash="dash",
+                row=index+1,
+                col=1,
+                annotation_text="min",
+                annotation_position="bottom right",
+            )
+            fig.add_hline(
+                y=self.td.performance_items[category]["max_value"],
+                line_dash="dash",
+                row=index+1,
+                col=1,
+                annotation_text="max",
+                annotation_position="top right",
+            )
+
+            title = categories_to_title[index]
+            fig.update_yaxes(title_text=title, row=index+1, col=1)
+            fig.update_xaxes(title_text="price", row=index+1, col=1)
+        
+        # add price range
+        fig = self.td.add_price_region(fig, self.desire_price_range)
+        
+        pixels_per_plot = 400
+        fig.update_layout(height=pixels_per_plot*len(categories), width=1080, title_text="Performance per Price", showlegend=False)
+        fig.show()
+        return
 
     def save_components_to_json(self, filename):
         self.td.save_components_to_json(filename)
