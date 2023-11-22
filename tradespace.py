@@ -219,7 +219,7 @@ class TradespaceDesigner:
                 )
             elif self.tradespace_df[name].max() > item["max_value"] and clip_max:
                 # set 1 to only where the max value is greater than the max value in the tradespace
-                self.tradespace_df.loc[self.tradespace_df[name] > item["max_value"], "SAU_" + name] = 1.0
+                self.tradespace_df.loc[self.tradespace_df[name] > item["max_value"], "sau_" + name] = 1.0
 
             # check if the min value is less than the min value in the tradespace
             if self.tradespace_df[name].min() < item["min_value"] and not clip_min:
@@ -228,24 +228,24 @@ class TradespaceDesigner:
                 )
             elif self.tradespace_df[name].min() < item["min_value"] and clip_min:
                 # set 0 to only where the min value is less than the min value in the tradespace
-                self.tradespace_df.loc[self.tradespace_df[name] < item["min_value"], "SAU_" + name] = 0.0
+                self.tradespace_df.loc[self.tradespace_df[name] < item["min_value"], "sau_" + name] = 0.0
             
             good_values = (self.tradespace_df[name] <= item["max_value"]) & (self.tradespace_df[name] >= item["min_value"])
             # calculate the SAU with a linear function
-            self.tradespace_df.loc[good_values, "SAU_" + name] = (
+            self.tradespace_df.loc[good_values, "sau_" + name] = (
                 self.tradespace_df[name] - item["min_value"]
             ) / (item["max_value"] - item["min_value"])
 
     def calculate_mau(self, restrictive=True):
-        self.tradespace_df["MAU"] = 0
+        self.tradespace_df["mau"] = 0
         for name, item in self.performance_items.items():
             
             # check if the SAU is zero and zero out the MAU
             if restrictive:
-                self.tradespace_df.loc[self.tradespace_df["SAU_" + name] == 0, "MAU"] = 0.0
+                self.tradespace_df.loc[self.tradespace_df["sau_" + name] == 0, "mau"] = 0.0
             
-            self.tradespace_df["MAU"] += (
-                item["weight"] * self.tradespace_df["SAU_" + name]
+            self.tradespace_df["mau"] += (
+                item["weight"] * self.tradespace_df["sau_" + name]
             )
 
     def generate_performance_tradespace(self, clip_max=True, clip_min=True, restrictive=True):
@@ -275,7 +275,7 @@ class TradespaceDesigner:
 
         return
 
-    def detect_pareto(self, x_name='price', y_name='MAU'):
+    def detect_pareto(self, x_name='price', y_name='mau'):
 
         for index, row in self.tradespace_df.iterrows():
 
@@ -289,7 +289,7 @@ class TradespaceDesigner:
                 continue
 
             # check if the point is dominated by any other point
-            if any((self.tradespace_df[x_name] < x) & (self.tradespace_df[y_name] > y)):
+            if any((self.tradespace_df[x_name] <= x) & (self.tradespace_df[y_name] > y)):
                 row['pareto'] = False
             else:
                 row['pareto'] = True
@@ -298,7 +298,7 @@ class TradespaceDesigner:
             self.tradespace_df.loc[index, 'pareto'] = row['pareto']
         return
 
-    def plot_tradespace(self, x_name='price', y_name='MAU', block=True, labels=False, hexbin=True):
+    def plot_tradespace(self, x_name='price', y_name='mau', block=True, labels=False, hexbin=True):
         # Plot the Maximum Payload vs MAU
         fig, ax = plt.subplots()
         ax.scatter(
@@ -360,7 +360,7 @@ class TradespaceDesigner:
             x0=desired_price_range[0],
             x1=desired_price_range[1],
             fillcolor="blue",
-            opacity=0.15,
+            opacity=0.10,
             line_width=0,
             annotation_text=f"Desired Price Range",
             annotation_position="top left",
@@ -418,8 +418,7 @@ class TradespaceDesigner:
                 mode="markers",
                 marker=dict(
                     size=10,
-                    color="blue",
-                    symbol="square",
+                    color="gray",
                 ),
                 text=[f"ID: {i}" for i in range(len(self.tradespace_df))],
                 hovertemplate="<b>%{text}</b><br>%{yaxis.title.text}: %{y}<br>%{xaxis.title.text}: %{x}<extra></extra>",
@@ -428,17 +427,35 @@ class TradespaceDesigner:
             trace_list.append(designs_scatter)
 
         if pareto:
-            x = self.tradespace_df[self.tradespace_df['pareto'] == True ][x_name]
-            y = self.tradespace_df[self.tradespace_df['pareto'] == True ][y_name]
-            ids = self.tradespace_df[self.tradespace_df['pareto'] == True ].index
+            # add pareto points to the figure
+            pareto_ids = self.tradespace_df['pareto'] == True
+            x = self.tradespace_df[pareto_ids][x_name]
+            y = self.tradespace_df[pareto_ids][y_name]
+            
+            # try to get min and max values
+            try:
+                y_min = self.tradespace_df[pareto_ids]['min_' + y_name].values
+                y_max = self.tradespace_df[pareto_ids]['max_' + y_name].values
+            except KeyError:
+                y_min = np.zeros(len(x))
+                y_max = np.zeros(len(x))
+                print(f"Warning: min and max values not found for {y_name}")
+
+            ids = self.tradespace_df[pareto_ids].index
             pareto_front_scatter = go.Scatter(
                 x=x,
                 y=y,
                 mode="markers",
                 marker=dict(
                     size=14,
-                    color="black",
+                    color="darkblue",
                 ),
+                error_y=dict(
+                    type='data', # value of error bar given in data coordinates
+                    symmetric=False,
+                    array=y_max-y,
+                    arrayminus=y-y_min,
+                    visible=True),
                 text=[f"ID: {i}" for i in ids],
                 hovertemplate="<b>%{text}</b><br><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>",
                 name='Pareto Front',
@@ -447,9 +464,19 @@ class TradespaceDesigner:
 
             near_but_not_pareto_ids = (self.tradespace_df['near_pareto'] == True) & (self.tradespace_df['pareto'] == False)
 
+            # add near pareto points to the plot
             x = self.tradespace_df[near_but_not_pareto_ids][x_name]
             y = self.tradespace_df[near_but_not_pareto_ids][y_name]
             ids = self.tradespace_df[near_but_not_pareto_ids].index
+
+            # try to get min and max values
+            try:
+                y_min = self.tradespace_df[near_but_not_pareto_ids]['min_' + y_name].values
+                y_max = self.tradespace_df[near_but_not_pareto_ids]['max_' + y_name].values
+            except KeyError:
+                y_min = np.zeros(len(x))
+                y_max = np.zeros(len(x))
+                print(f"Warning: min and max values not found for {y_name}")
 
             near_pareto_front_scatter = go.Scatter(
                 x=x,
@@ -457,8 +484,15 @@ class TradespaceDesigner:
                 mode="markers",
                 marker=dict(
                     size=14,
-                    color="gray"
+                    color="blue",
+                    # opacity=0.50,
                 ),
+                error_y=dict(
+                    type='data', # value of error bar given in data coordinates
+                    symmetric=False,
+                    array=y_max-y,
+                    arrayminus=y-y_min,
+                    visible=True),
                 text=[f"ID: {i}" for i in ids],
                 hovertemplate="<b>%{text}</b><br><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>",
                 name='Near Pareto Front',
@@ -484,7 +518,7 @@ class TradespaceDesigner:
     def plot_price_vs_mau(self, desired_price_range=[], block=True):
 
         # generate scatter plot
-        designs_scatter, pareto_front_scatter, near_pareto_front_scatter = self.plot_tradespace_plotly('price', 'MAU', block=False)
+        designs_scatter, pareto_front_scatter, near_pareto_front_scatter = self.plot_tradespace_plotly('price', 'mau', block=False)
 
         # create a figure with the scatter plot
         fig = go.Figure(data=[designs_scatter, near_pareto_front_scatter, pareto_front_scatter])
