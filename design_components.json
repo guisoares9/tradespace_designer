@@ -202,15 +202,15 @@
             }
         }
     },
-    "propeller_10x45": {
+    "propeller_ms1101": {
         "category": "propeller",
         "attributes": {
             "diameter": {
-                "value": 10,
+                "value": 11,
                 "units": "in"
             },
             "pitch": {
-                "value": 4.5,
+                "value": 4.2,
                 "units": "in"
             },
             "num_blades": {
@@ -222,16 +222,16 @@
                 "units": "kg"
             },
             "price": {
-                "value": 5,
+                "value": 6.995,
                 "units": "USD"
             }
         }
     },
-    "propeller_8x45": {
+    "propeller_t9545": {
         "category": "propeller",
         "attributes": {
             "diameter": {
-                "value": 8,
+                "value": 9.5,
                 "units": "in"
             },
             "pitch": {
@@ -243,11 +243,36 @@
                 "units": "int"
             },
             "mass": {
-                "value": 0.01,
+                "value": 0.008,
                 "units": "kg"
             },
             "price": {
-                "value": 5,
+                "value": 3.995,
+                "units": "USD"
+            }
+        }
+    },
+    "propeller_mf1302": {
+        "category": "propeller",
+        "attributes": {
+            "diameter": {
+                "value": 13,
+                "units": "in"
+            },
+            "pitch": {
+                "value": 4.8,
+                "units": "in"
+            },
+            "num_blades": {
+                "value": 2,
+                "units": "int"
+            },
+            "mass": {
+                "value": 0.017,
+                "units": "kg"
+            },
+            "price": {
+                "value": 14.995,
                 "units": "USD"
             }
         }
@@ -281,7 +306,28 @@
                 "units": "int"
             },
             "mass": {
-                "value": 0.4,
+                "value": 0.282,
+                "units": "kg"
+            },
+            "price": {
+                "value": 17.86,
+                "units": "USD"
+            }
+        }
+    },
+    "cig_frame": {
+        "category": "frame",
+        "attributes": {
+            "diagonal": {
+                "value": 450,
+                "units": "mm"
+            },
+            "number_of_rotors": {
+                "value": 6,
+                "units": "int"
+            },
+            "mass": {
+                "value": 0.3,
                 "units": "kg"
             },
             "price": {
@@ -290,23 +336,19 @@
             }
         }
     },
-    "frame_250": {
-        "category": "frame",
+    "jetson_nano": {
+        "category": "onboard_computer",
         "attributes": {
-            "diagonal": {
-                "value": 250,
-                "units": "mm"
-            },
-            "number_of_rotors": {
-                "value": 4,
-                "units": "int"
+            "control_current": {
+                "value": 3,
+                "units": "A"
             },
             "mass": {
-                "value": 0.2,
+                "value": 0.1,
                 "units": "kg"
             },
             "price": {
-                "value": 15,
+                "value": 150,
                 "units": "USD"
             }
         }
