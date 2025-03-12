@@ -1,13 +1,13 @@
 {
-    "zeee_1500_2_pack": {
+    "zeee_1500_2x": {
         "category": "battery",
         "attributes": {
             "voltage": {
-                "value": 7.4,
+                "value": 14.8,
                 "units": "V"
             },
             "capacity": {
-                "value": 3000,
+                "value": 6000,
                 "units": "mAh"
             },
             "min_capacity": {
@@ -15,28 +15,28 @@
                 "units": "mAh"
             },
             "resistance": {
-                "value": 0.2,
+                "value": 0.4,
                 "units": "ohm"
             },
             "mass": {
-                "value": 0.176,
+                "value": 0.704,
                 "units": "kg"
             },
             "price": {
-                "value": 32.99,
+                "value": 131.96,
                 "units": "EUR"
             }
         }
     },
-    "tatoo_2300": {
+    "tatoo_2300_2x": {
         "category": "battery",
         "attributes": {
             "voltage": {
-                "value": 11.1,
+                "value": 22.2,
                 "units": "V"
             },
             "capacity": {
-                "value": 2300,
+                "value": 4600,
                 "units": "mAh"
             },
             "min_capacity": {
@@ -44,15 +44,15 @@
                 "units": "mAh"
             },
             "resistance": {
-                "value": 0.2,
+                "value": 0.4,
                 "units": "ohm"
             },
             "mass": {
-                "value": 0.1822,
+                "value": 0.7288,
                 "units": "kg"
             },
             "price": {
-                "value": 26.19,
+                "value": 104.76,
                 "units": "EUR"
             }
         }
@@ -61,7 +61,7 @@
         "category": "battery",
         "attributes": {
             "voltage": {
-                "value": 11.1,
+                "value": 22.2,
                 "units": "V"
             },
             "capacity": {
@@ -69,19 +69,19 @@
                 "units": "mAh"
             },
             "min_capacity": {
-                "value": 1000,
+                "value": 500,
                 "units": "mAh"
             },
             "resistance": {
-                "value": 0.2,
+                "value": 0.4,
                 "units": "ohm"
             },
             "mass": {
-                "value": 0.376,
+                "value": 0.752,
                 "units": "kg"
             },
             "price": {
-                "value": 45.99,
+                "value": 91.98,
                 "units": "EUR"
             }
         }
@@ -98,7 +98,7 @@
                 "units": "mAh"
             },
             "min_capacity": {
-                "value": 1600,
+                "value": 800,
                 "units": "mAh"
             },
             "resistance": {
@@ -115,15 +115,15 @@
             }
         }
     },
-    "tatoo_1300": {
+    "tatoo_1300_2x": {
         "category": "battery",
         "attributes": {
             "voltage": {
-                "value": 22.2,
+                "value": 44.4,
                 "units": "V"
             },
             "capacity": {
-                "value": 1300,
+                "value": 2600,
                 "units": "mAh"
             },
             "min_capacity": {
@@ -131,15 +131,44 @@
                 "units": "mAh"
             },
             "resistance": {
-                "value": 0.2,
+                "value": 0.4,
                 "units": "ohm"
             },
             "mass": {
-                "value": 0.212,
+                "value": 0.848,
                 "units": "kg"
             },
             "price": {
-                "value": 41.62,
+                "value": 166.48,
+                "units": "EUR"
+            }
+        }
+    },
+    "4s_5000": {
+        "category": "battery",
+        "attributes": {
+            "voltage": {
+                "value": 29.6,
+                "units": "V"
+            },
+            "capacity": {
+                "value": 5000,
+                "units": "mAh"
+            },
+            "min_capacity": {
+                "value": 500,
+                "units": "mAh"
+            },
+            "resistance": {
+                "value": 0.4,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.752,
+                "units": "kg"
+            },
+            "price": {
+                "value": 91.98,
                 "units": "EUR"
             }
         }
@@ -178,6 +207,35 @@
         "attributes": {
             "kv": {
                 "value": 1950,
+                "units": "rpm/V"
+            },
+            "no-load voltage": {
+                "value": 10,
+                "units": "V"
+            },
+            "no-load current": {
+                "value": 2.45,
+                "units": "A"
+            },
+            "resistance": {
+                "value": 0.1,
+                "units": "ohm"
+            },
+            "mass": {
+                "value": 0.061,
+                "units": "kg"
+            },
+            "price": {
+                "value": 24.83,
+                "units": "USD"
+            }
+        }
+    },
+    "motor_kv2400": {
+        "category": "motor",
+        "attributes": {
+            "kv": {
+                "value": 2400,
                 "units": "rpm/V"
             },
             "no-load voltage": {
